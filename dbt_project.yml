@@ -1,0 +1,23 @@
+name: finops
+version: "1.7.0"
+config-version: 2
+
+profile: finops
+
+model-paths: ["models"]
+test-paths:  ["tests"]
+docs-paths:  ["docs"]
+
+models:
+  finops:
+    +materialized: table
+    +tags: ["finops"]
+    staging:
+      +materialized: view
+      +schema: staging
+    marts:
+      +materialized: table
+      +schema: finops
+
+vars:
+  lookback_months: 13
