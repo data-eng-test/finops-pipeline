@@ -1,0 +1,53 @@
+version: 2
+
+sources:
+  - name: raw
+    database: my-company-prod
+    schema: raw
+    tables:
+      - name: aws_billing
+        description: "Raw AWS Cost Explorer exports, loaded daily by ingest/aws.py"
+        columns:
+          - name: export_date
+            description: "Date of the billing line item"
+          - name: line_item_unblended_cost
+            description: "Unblended cost in USD"
+          - name: cost_center_tag
+            description: "AWS resource tag: CostCenter"
+          - name: service_name
+            description: "AWS service e.g. AmazonEC2, AmazonS3"
+          - name: linked_account_id
+            description: "AWS linked account ID"
+
+      - name: gcp_billing
+        description: "Raw GCP Billing exports from BigQuery billing export"
+        columns:
+          - name: usage_start_date
+            description: "Date of usage"
+          - name: cost
+            description: "Cost in USD before credits"
+          - name: credits_amount
+            description: "Committed use discounts and credits (negative value)"
+          - name: label_cost_centre
+            description: "GCP resource label: cost-centre"
+          - name: service_description
+            description: "GCP service e.g. Compute Engine, BigQuery"
+
+models:
+  - name: stg_billing_raw
+    description: "Unified staging table combining AWS and GCP billing. Deduplicates GCP committed use rows."
+    columns:
+      - name: date
+        tests: [not_null]
+      - name: cloud_provider
+        tests: [not_null, accepted_values: {values: ['AWS', 'GCP']}]
+      - name: cost_usd
+        tests: [not_null]
+
+  - name: daily_spend
+    description: "Final daily cloud spend table powering the FinOps dashboard. Partitioned by date, clustered by cloud_provider and cost_centre."
+    columns:
+      - name: date
+        tests: [not_null]
+      - name: total_cost_usd
+        description: "Total spend in USD for the day, provider, and cost centre"
